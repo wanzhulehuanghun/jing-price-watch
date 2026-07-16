@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#1e40af">
+  <title>京价守望 · 多站点历史低价提醒</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/" aria-label="京价守望首页">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 12h3l2-7 4 14 3-9 2 2h4"/></svg>
+        </span>
+        <span><strong>京价守望</strong><small>历史低价提醒</small></span>
+      </a>
+      <div class="top-actions">
+        <div class="scheduler-pill" id="scheduler-pill"><span class="status-dot"></span><span id="next-run">正在连接…</span></div>
+        <button class="button button-ghost" id="notification-button" type="button">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+          浏览器提醒
+        </button>
+        <button class="icon-button" id="settings-button" type="button" aria-label="打开设置" title="设置" disabled>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 9 19.38a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.62 15 1.7 1.7 0 0 0 3.08 14H3v-4h.08A1.7 1.7 0 0 0 4.62 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.62 1.7 1.7 0 0 0 10 3.08V3h4v.08A1.7 1.7 0 0 0 15 4.62a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.38 9 1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="shell">
+    <div class="connection-banner" id="connection-banner" role="alert" hidden>
+      <div><strong>本地服务连接中断</strong><span>价格记录仍安全保存在本机，请确认后台服务正在运行。</span></div>
+      <button class="button button-ghost" id="retry-connection" type="button">重新连接</button>
+    </div>
+    <section class="hero" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">多站点追踪 · 每日留档</p>
+        <h1 id="page-title">价格跌到真正的历史新低，再告诉你。</h1>
+        <p>粘贴任意购物网站的商品详情页。系统优先读取标准商品价格；特殊网站可指定 CSS 选择器，只有唯一可信的主售价才会写入历史。</p>
+      </div>
+      <form class="add-form" id="add-form">
+        <label for="product-url">商品链接（支持各购物网站）</label>
+        <div class="input-action">
+          <input id="product-url" name="url" type="url" inputmode="url" autocomplete="url" autocapitalize="none" spellcheck="false" required aria-describedby="product-url-help product-url-error" placeholder="https://shop.example.com/product/…">
+          <button class="button button-primary" type="submit" id="add-button">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            添加并首次检查
+          </button>
+        </div>
+        <div class="field-error" id="product-url-error" role="alert" hidden></div>
+        <div class="form-foot"><span id="product-url-help">支持标准 JSON-LD、语义价格和已登录页面；不确定价格不会入库。</span><button type="button" class="text-button" id="advanced-toggle" aria-expanded="false" aria-controls="advanced-fields">高级选项</button></div>
+        <div class="advanced-fields" id="advanced-fields" hidden>
+          <label class="field" for="product-name">备注名（可选）<input id="product-name" name="name" placeholder="例如：办公室显示器"></label>
+          <label class="field" for="price-selector">价格 CSS 选择器（可选）<input id="price-selector" name="price_selector" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="price-selector-help price-selector-error" placeholder=".buy-box .current-price"><span class="helper" id="price-selector-help">留空时自动读取结构化价格；仅填写指向当前主售价的选择器。</span><span class="field-error" id="price-selector-error" role="alert" hidden></span></label>
+        </div>
+      </form>
+    </section>
+
+    <section class="metrics" aria-label="监控概览">
+      <article class="metric-card"><span class="metric-icon blue"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3v18h18M7 15l4-4 3 3 5-7"/></svg></span><div><span>监控中</span><strong id="metric-enabled">—</strong><small id="metric-total">共 — 件商品</small></div></article>
+      <article class="metric-card"><span class="metric-icon green"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m3 12 6 6L21 6"/></svg></span><div><span>近 30 天新低</span><strong id="metric-lows">—</strong><small>仅计算突破历史记录</small></div></article>
+      <article class="metric-card"><span class="metric-icon amber"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 6v6l4 2M22 12a10 10 0 1 1-10-10"/></svg></span><div><span>最近检查</span><strong class="metric-date" id="metric-checked">—</strong><small id="metric-job">等待每日任务</small></div></article>
+      <article class="metric-card"><span class="metric-icon red"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.7 2.4 17.4A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-3L13.7 3.7a2 2 0 0 0-3.4 0Z"/></svg></span><div><span>待处理异常</span><strong id="metric-errors">—</strong><small>抓价失败会保留原记录</small></div></article>
+    </section>
+
+    <div class="content-grid">
+      <section class="panel products-panel" aria-labelledby="products-title">
+        <div class="panel-header">
+          <div><p class="eyebrow">WATCHLIST</p><h2 id="products-title">商品监控</h2></div>
+          <div class="panel-tools">
+            <label class="search-box" aria-label="搜索商品"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="search-input" placeholder="搜索名称、网站或商品编号"></label>
+            <button class="button button-secondary" id="check-all-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6v5h-5M4 18v-5h5M6.1 9A7 7 0 0 1 18.5 6M17.9 15A7 7 0 0 1 5.5 18"/></svg>立即检查全部</button>
+          </div>
+        </div>
+        <div class="job-progress" id="job-progress" hidden><div><span id="job-progress-label">正在检查价格…</span><span id="job-progress-count">0 / 0</span></div><progress id="job-progress-bar" max="100" value="0"></progress></div>
+        <div id="products-status" class="sr-only" aria-live="polite"></div>
+        <div id="products-list" class="products-list">
+          <div class="loading-state"><span class="spinner"></span><span>正在读取价格记录…</span></div>
+        </div>
+      </section>
+
+      <aside class="panel alerts-panel" aria-labelledby="alerts-title">
+        <div class="panel-header">
+          <div><p class="eyebrow">ALERTS</p><h2 id="alerts-title">新低提醒 <span class="badge" id="alert-badge" hidden>0</span></h2></div>
+          <button class="text-button" id="read-all-button" type="button">全部已读</button>
+        </div>
+        <div id="alerts-list" class="alerts-list"><div class="loading-state small"><span class="spinner"></span></div></div>
+      </aside>
+    </div>
+  </main>
+
+  <dialog id="settings-dialog" class="dialog" aria-labelledby="settings-title">
+    <form method="dialog" class="dialog-card" id="settings-form">
+      <div class="dialog-header"><div><p class="eyebrow">SETTINGS</p><h2 id="settings-title">监控与提醒设置</h2></div><button class="icon-button" id="settings-close" type="button" aria-label="关闭设置"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <div class="settings-section auth-section">
+        <div class="section-heading">
+          <div><span class="section-kicker">网站账户</span><h3>专用浏览器登录会话</h3></div>
+          <span class="session-badge" id="session-badge"><span></span><b>正在检测</b></span>
+        </div>
+        <div class="session-card" id="session-card" aria-live="polite">
+          <span class="session-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+          <div><strong id="session-title">正在检测浏览器能力…</strong><p id="session-description">各网站登录状态仅保存在本机专用 Edge 目录。</p></div>
+        </div>
+        <div class="session-steps">
+          <span><b>1</b> 从商品行打开网站</span><span><b>2</b> 在专用 Edge 登录</span><span><b>3</b> 返回这里确认</span>
+        </div>
+        <div class="session-actions">
+          <button class="button button-secondary" id="login-start-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5m5 5H3"/></svg>打开京东登录</button>
+          <button class="button button-primary" id="login-complete-button" type="button" hidden><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></svg>我已完成登录</button>
+          <button class="button button-ghost" id="login-cancel-button" type="button" hidden>取消登录</button>
+        </div>
+        <p class="privacy-note"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>密码由各购物网站直接处理。本系统不读取密码；Cookie 保存在 Windows 本机应用数据目录，不随项目或 OneDrive 同步。</span></p>
+      </div>
+      <div class="settings-section">
+        <div class="setting-row"><div><label for="daily-enabled">每日自动检查</label><p>服务保持运行时，在设定时间自动检查所有启用的商品。</p></div><label class="switch"><input id="daily-enabled" type="checkbox"><span></span></label></div>
+        <label class="field">每天检查时间<input id="daily-time" type="time" required></label>
+      </div>
+      <div class="settings-section">
+        <label class="field">新低提醒 Webhook（可选）<input id="webhook-url" type="url" placeholder="https://…"></label>
+        <p class="helper">支持企业微信机器人、钉钉机器人、Server酱；其他地址将收到标准 JSON。地址仅保存在本机数据库。</p>
+      </div>
+      <div class="dialog-actions"><button class="button button-ghost" id="settings-cancel" type="button">取消</button><button class="button button-primary" id="save-settings" type="submit" value="default">保存设置</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="product-dialog" class="dialog" aria-labelledby="product-dialog-title">
+    <form class="dialog-card compact-dialog" id="product-form">
+      <div class="dialog-header"><div><p class="eyebrow">PRODUCT SETTINGS</p><h2 id="product-dialog-title">商品抓价设置</h2></div><button class="icon-button" id="product-dialog-close" type="button" aria-label="关闭商品设置"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <input id="product-edit-id" type="hidden">
+      <div class="settings-section">
+        <label class="field" for="product-edit-name">显示名称<input id="product-edit-name" required></label>
+        <label class="field" for="product-edit-selector">价格 CSS 选择器（可选）<input id="product-edit-selector" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="product-edit-selector-help product-edit-selector-error" placeholder=".buy-box .current-price"><span class="helper" id="product-edit-selector-help">当自动解析失败时，在商品页检查主售价元素并复制其 CSS 选择器。多个不同价格会被拒绝。</span><span class="field-error" id="product-edit-selector-error" role="alert" hidden></span></label>
+        <a class="inline-link" id="product-edit-link" href="#" target="_blank" rel="noopener noreferrer">在商品网站中打开</a>
+      </div>
+      <div class="dialog-actions"><button class="button button-ghost" id="product-dialog-cancel" type="button">取消</button><button class="button button-primary" id="product-save" type="submit">保存并重新检查</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="history-dialog" class="dialog history-dialog" aria-labelledby="history-title">
+    <div class="dialog-card history-card">
+      <div class="dialog-header"><div><p class="eyebrow">PRICE HISTORY</p><h2 id="history-title">价格历史</h2></div><div class="dialog-header-actions"><a class="button button-secondary compact-button" id="history-export" href="#">导出 CSV</a><button class="icon-button" id="history-close" type="button" aria-label="关闭价格历史"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div></div>
+      <div id="history-summary" class="history-summary"></div>
+      <div id="history-chart" class="history-chart" role="img" aria-label="商品价格趋势图"></div>
+      <div class="history-table-wrap"><table><caption class="sr-only">商品历史价格记录</caption><thead><tr><th scope="col">检查时间</th><th scope="col">价格</th><th scope="col">来源</th><th scope="col">状态</th></tr></thead><tbody id="history-table"></tbody></table></div>
+    </div>
+  </dialog>
+
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

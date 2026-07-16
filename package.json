@@ -1,0 +1,16 @@
+{
+  "name": "jing-price-watch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local-first, multi-site product price tracker with historical-low alerts.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node --check browser_helper.mjs && node --check web/app.js",
+    "test:browser": "node tests/test_browser_helper.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
+  }
+}

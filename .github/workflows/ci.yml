@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: python -m unittest discover -s tests -v
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check
+      - run: npm run test:browser
+
+  windows-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate PowerShell launchers
+        shell: pwsh
+        run: |
+          $files = @("runtime.ps1", "start.ps1", "start-background.ps1", "install-autostart.ps1", "remove-autostart.ps1")
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $file), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count) { throw "$file failed to parse: $($errors[0].Message)" }
+          }
+      - run: python -m unittest discover -s tests -v
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - run: npm run test:browser
+      - name: Start service and verify API/UI
+        shell: pwsh
+        run: |
+          $port = 18765
+          $db = Join-Path $env:RUNNER_TEMP "pricewatch-ci.db"
+          $stdout = Join-Path $env:RUNNER_TEMP "pricewatch-ci.log"
+          $stderr = Join-Path $env:RUNNER_TEMP "pricewatch-ci-error.log"
+          $process = Start-Process -FilePath python -ArgumentList @("-B", "app.py", "--port", "$port", "--db", "`"$db`"") -WorkingDirectory $PWD -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+          try {
+            $dashboard = $null
+            for ($attempt = 0; $attempt -lt 40; $attempt++) {
+              try {
+                $dashboard = Invoke-RestMethod "http://127.0.0.1:$port/api/dashboard" -TimeoutSec 2
+                break
+              } catch {
+                Start-Sleep -Milliseconds 250
+              }
+            }
+            if (-not $dashboard) {
+              if (Test-Path $stderr) { Get-Content $stderr }
+              throw "Service did not become ready"
+            }
+            if ($dashboard.products.Count -ne 0) { throw "Fresh database should have no products" }
+            $page = Invoke-WebRequest "http://127.0.0.1:$port/" -UseBasicParsing
+            if ($page.StatusCode -ne 200 -or $page.Content -notmatch "京价守望") { throw "UI health check failed" }
+          } finally {
+            if ($process -and -not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }

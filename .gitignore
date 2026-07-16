@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+node_modules/
+data/*.db
+data/*.db-*
+data/*.log
+data/*.bak
+data/jd-edge-profile/
+data/site-profiles/
+tmp/
