@@ -10,6 +10,7 @@ import os
 import re
 import socket
 import sqlite3
+import sys
 import threading
 import webbrowser
 from http import HTTPStatus
@@ -26,6 +27,17 @@ from pricewatch.service import DailyScheduler, TrackerService, next_run_text
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
 DATA_DIR = ROOT / "data"
+
+
+def configure_output_streams() -> None:
+    """Keep redirected Windows logs from crashing on Chinese status text."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (OSError, ValueError):
+                pass
 
 
 def normalize_bind_host(value: str) -> str:
@@ -55,7 +67,7 @@ class PriceWatchHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:
         try:
             print(f"[{self.log_date_time_string()}] {fmt % args}", flush=True)
-        except (BrokenPipeError, OSError, ValueError):
+        except (BrokenPipeError, OSError, UnicodeError, ValueError):
             # A detached Windows process may outlive the console/pipe that
             # launched it. Request handling must never depend on stdout.
             pass
@@ -345,6 +357,7 @@ class PriceWatchServer(ThreadingHTTPServer):
 
 
 def main() -> None:
+    configure_output_streams()
     parser = argparse.ArgumentParser(description="京价守望 - 京东历史低价提醒")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
